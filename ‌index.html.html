@@ -1,0 +1,815 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FreshStart - Food Donation & Expiry Reminder</title>
+<style>
+:root {
+  --green:#218653; --dark:#155b39; --light:#eaf7ef;
+  --bg:#f4f8f5; --text:#25352c; --muted:#65736a;
+  --border:#dce7df; --orange:#fff0d7; --red:#fde8e8;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text)}
+header{background:white;padding:16px 5%;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+.brand{font-size:25px;font-weight:bold;color:var(--green)}
+.brand small{display:block;font-size:12px;color:var(--muted);margin-top:4px}
+main{max-width:1250px;margin:auto;padding:24px 5%}
+h1{font-size:28px} h2{font-size:23px} h3{font-size:19px}
+p{line-height:1.5}
+input,select,textarea,button{font:inherit;border-radius:8px}
+input,select,textarea{width:100%;padding:11px;border:1px solid #cbd9ce;background:white;color:var(--text)}
+label{display:block;font-size:14px;font-weight:bold;margin-bottom:7px}
+.field{margin-bottom:15px}
+button{border:0;padding:11px 15px;background:var(--green);color:white;font-weight:bold;cursor:pointer}
+button:hover{filter:brightness(.95)}
+button.secondary{background:#e7eee9;color:var(--dark)}
+button.danger{background:#b94141}
+button:disabled{opacity:.5;cursor:not-allowed}
+.card{background:white;border:1px solid var(--border);border-radius:15px;padding:20px;margin-bottom:17px;box-shadow:0 3px 12px #1c513009}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px}
+.stat{background:white;padding:17px;border:1px solid var(--border);border-radius:12px}
+.stat strong{display:block;font-size:27px;color:var(--green);margin-top:8px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:20px 0}
+.tabs button{background:#e4f2e8;color:var(--dark)}
+.tabs button.active{background:var(--green);color:white}
+.notice{padding:13px 15px;border-radius:10px;background:var(--light);margin:14px 0;line-height:1.5}
+.warning{background:var(--orange)} .error{background:var(--red)}
+.muted{font-size:13px;color:var(--muted)}
+.badge{display:inline-block;border-radius:20px;padding:5px 10px;font-size:12px;font-weight:bold;background:var(--orange)}
+.badge.approved,.badge.collected,.badge.safe{background:#d8f3df;color:#16633a}
+.badge.rejected,.badge.expired{background:var(--red);color:#9a2929}
+.badge.soon{background:var(--orange);color:#8a5000}
+.item{padding:14px 0;border-bottom:1px solid var(--border)}
+.item:last-child{border-bottom:0}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row>*{flex:1}
+.hidden{display:none!important}
+table{width:100%;border-collapse:collapse;background:white}
+th,td{padding:12px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+th{background:var(--light)}
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px}
+footer{text-align:center;padding:25px;color:var(--muted);font-size:12px}
+a{color:var(--green)}
+.mess-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}
+.mess-kpi{background:white;border:1px solid var(--border);border-radius:12px;padding:16px}
+.mess-kpi span{display:block;color:var(--muted);font-size:13px}
+.mess-kpi strong{display:block;color:var(--green);font-size:25px;margin-top:8px}
+.mess-bar{height:10px;background:#e7eee9;border-radius:99px;overflow:hidden;min-width:90px}
+.mess-bar span{display:block;height:100%;background:var(--green);border-radius:99px}
+.mess-table{width:100%;border-collapse:collapse;min-width:760px}
+.mess-table td,.mess-table th{font-size:13px}
+.mess-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+@media(max-width:720px){.mess-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+ main{padding:18px 4%}.grid,.stats{grid-template-columns:1fr}
+ th,td{padding:9px;font-size:13px}
+ header{padding:14px 4%}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">🌱 FreshStart
+    <small id="tagline">Share food. Reduce waste. Spread hope.</small>
+  </div>
+  <div style="width:180px">
+    <label id="languageLabel" for="language">Language</label>
+    <select id="language" onchange="changeLanguage(this.value)">
+      <option value="en">English</option>
+      <option value="te">తెలుగు (Telugu)</option>
+      <option value="hi">हिन्दी (Hindi)</option>
+    </select>
+  </div>
+</header>
+
+<main>
+<!-- PROFILE SETUP -->
+<section id="profilePage">
+ <div class="card">
+  <h1 data-i18n="profileTitle">Let's set up your profile</h1>
+  <p data-i18n="profileIntro">Add your contact and address details once.</p>
+  <div class="notice" data-i18n="privacyNote">Demo information is stored in this browser.</div>
+  <form id="profileForm">
+   <div class="grid">
+    <div class="field"><label for="fullName" data-i18n="fullName">Full name *</label><input id="fullName" required maxlength="100"></div>
+    <div class="field"><label for="phone" data-i18n="phone">Phone number *</label><input id="phone" type="tel" required maxlength="20"></div>
+    <div class="field"><label for="email" data-i18n="email">Email (optional)</label><input id="email" type="email"></div>
+    <div class="field"><label for="role" data-i18n="role">I am a *</label>
+     <select id="role"><option value="donor" data-i18n="donor">Food donor</option><option value="ngo" data-i18n="ngoRole">NGO representative (demo)</option></select>
+    </div>
+   </div>
+   <div class="field"><label for="address" data-i18n="address">House, street and area *</label><textarea id="address" required maxlength="300"></textarea></div>
+   <div class="grid">
+    <div class="field"><label for="city" data-i18n="city">City *</label><input id="city" required></div>
+    <div class="field"><label for="state" data-i18n="state">State *</label><input id="state" required></div>
+    <div class="field"><label for="pincode" data-i18n="pincode">PIN code *</label><input id="pincode" required maxlength="10"></div>
+    <div class="field"><label for="landmark" data-i18n="landmark">Landmark (optional)</label><input id="landmark"></div>
+   </div>
+   <div class="field"><label for="coordinates" data-i18n="coordinates">Map coordinates (optional)</label>
+    <input id="coordinates" placeholder="17.3850, 78.4867">
+    <p class="muted" data-i18n="mapHint">Optional coordinates can improve map accuracy.</p>
+   </div>
+   <button type="submit" data-i18n="saveProfile">Save profile and continue</button>
+  </form>
+ </div>
+</section>
+
+<!-- MAIN APPLICATION -->
+<section id="appPage" class="hidden">
+ <div class="card">
+  <div class="row">
+   <div><h2 id="welcome">Welcome!</h2><p id="profileSummary" class="muted"></p></div>
+   <button class="secondary" onclick="editProfile()" data-i18n="editProfile">Edit profile</button>
+  </div>
+  <div class="notice" data-i18n="mapNote">Your saved address is used for pickup.</div>
+ </div>
+
+ <div class="tabs" id="tabs">
+  <button class="active" data-tab="dashboard" onclick="showTab('dashboard')" data-i18n="dashboard">Dashboard</button>
+  <button data-tab="inventory" onclick="showTab('inventory')" data-i18n="inventory">Food Inventory</button>
+  <button data-tab="donations" onclick="showTab('donations')" data-i18n="donations">Donations</button>
+  <button data-tab="tracking" onclick="showTab('tracking')" data-i18n="tracking">Tracking</button>
+  <button data-tab="ngo" onclick="showTab('ngo')" data-i18n="ngoDesk">NGO desk</button>
+  <button data-tab="impact" onclick="showTab('impact')" data-i18n="impact">Impact Analytics</button>
+  <button data-tab="ai" onclick="showTab('ai')" data-i18n="aiTab">AI Food Assistant</button>
+  <button data-tab="mess" onclick="showTab('mess')" data-i18n="messIntel">Smart Mess Intelligence</button>
+ </div>
+
+ <!-- DASHBOARD -->
+ <section id="dashboardTab">
+  <h1 data-i18n="dashboardTitle">Your food-sharing dashboard</h1>
+  <div id="expiryAlerts"></div>
+  <div class="stats">
+   <div class="stat"><span data-i18n="inventoryCount">Food items tracked</span><strong id="statInventory">0</strong></div>
+   <div class="stat"><span data-i18n="expiringSoon">Expiring soon</span><strong id="statExpiring">0</strong></div>
+   <div class="stat"><span data-i18n="totalDonations">Your donations</span><strong id="statTotal">0</strong></div>
+   <div class="stat"><span data-i18n="collected">Collected</span><strong id="statCollected">0</strong></div>
+  </div>
+  <div class="card">
+   <h3 data-i18n="howItWorks">How FreshStart works</h3>
+   <p data-i18n="step1">1. Save your profile and pickup address.</p>
+   <p data-i18n="step2">2. Track food expiry dates and add donations.</p>
+   <p data-i18n="step3">3. The donation waits for NGO review.</p>
+   <p data-i18n="step4">4. After NGO approval, Tracking shows Approved.</p>
+   <p data-i18n="step5">5. Coordinate pickup and mark it collected.</p>
+  </div>
+  <div class="notice warning" data-i18n="safety">Never donate expired or unsafe food.</div>
+ </section>
+
+ <!-- NEW FOOD INVENTORY SECTION -->
+ <section id="inventoryTab" class="hidden">
+  <h1 data-i18n="inventory">Food Inventory</h1>
+  <p data-i18n="inventoryIntro">Add food details and monitor expiry dates.</p>
+
+  <div id="inventoryAlerts"></div>
+
+  <div class="card">
+   <h2 data-i18n="addFood">Add Food Item</h2>
+   <form id="inventoryForm">
+    <div class="field">
+     <label for="invName" data-i18n="foodName">Food Name</label>
+     <input id="invName" required maxlength="100" placeholder="Example: Tomatoes">
+    </div>
+    <div class="field">
+     <label for="invCategory" data-i18n="category">Category</label>
+     <select id="invCategory">
+      <option value="produce" data-i18n="catProduce">Fruits & Vegetables</option>
+      <option value="dairy" data-i18n="catDairy">Dairy Products</option>
+      <option value="grains" data-i18n="catGrains">Grains & Staples</option>
+      <option value="cooked" data-i18n="catCooked">Cooked Food</option>
+      <option value="packaged" data-i18n="catPackaged">Packaged Food</option>
+      <option value="other" data-i18n="catOther">Other</option>
+     </select>
+    </div>
+    <div class="field">
+     <label for="invQuantity" data-i18n="quantity">Quantity</label>
+     <input id="invQuantity" type="number" min="0.01" step="any" required>
+    </div>
+    <div class="field">
+     <label for="invUnit" data-i18n="unit">Unit</label>
+     <select id="invUnit">
+      <option value="kg" data-i18n="kg">Kilograms</option>
+      <option value="g" data-i18n="grams">Grams</option>
+      <option value="litre" data-i18n="litres">Litres</option>
+      <option value="pack" data-i18n="packs">Packs</option>
+      <option value="piece" data-i18n="pieces">Pieces</option>
+     </select>
+    </div>
+    <div class="field">
+     <label for="invExpiry" data-i18n="expiryDate">Expiry Date</label>
+     <input id="invExpiry" type="date" required>
+    </div>
+    <div class="field">
+     <label for="invNotes" data-i18n="storageNotes">Storage Notes</label>
+     <input id="invNotes" maxlength="300" placeholder="Example: Keep refrigerated">
+    </div>
+    <button type="submit" data-i18n="addFoodButton">Add Food</button>
+   </form>
+  </div>
+
+  <div class="card">
+   <div class="row">
+    <h2 data-i18n="inventoryList">Your Food Inventory</h2>
+    <button class="secondary" onclick="renderInventory()" data-i18n="refresh">Refresh</button>
+   </div>
+   <p class="muted" data-i18n="reminderInfo">Expiry reminders are based on the date you entered. Items expiring within three days are highlighted.</p>
+   <div id="inventoryList"></div>
+  </div>
+ </section>
+
+ <!-- AI FOOD ASSISTANT: browser-based demo logic, no external API -->
+ <section id="aiTab" class="hidden">
+  <h1 data-i18n="aiTitle">AI Food Rescue Assistant</h1>
+  <p data-i18n="aiIntro">Get practical suggestions for reducing food waste and organizing safe donations.</p>
+  <div class="notice warning" data-i18n="aiDemoNote">Prototype mode: suggestions use simple local rules, not a connected generative AI service. Always verify food safety.</div>
+  <div class="card">
+   <h2 data-i18n="aiAdvisorTitle">Smart Food Action Advisor</h2>
+   <p class="muted" data-i18n="aiAdvisorHelp">Choose an item from your Food Inventory to receive a suggestion based on its expiry date and details.</p>
+   <div class="field"><label for="aiFoodSelect" data-i18n="aiChooseFood">Choose inventory item</label><select id="aiFoodSelect"></select></div>
+   <button type="button" onclick="analyzeSelectedFood()" data-i18n="aiAnalyze">Analyze food</button>
+   <div id="aiFoodResult" aria-live="polite"></div>
+  </div>
+  <div class="card">
+   <h2 data-i18n="aiChatTitle">Ask the Food Donation Assistant</h2>
+   <p class="muted" data-i18n="aiChatHelp">Ask about reducing food waste, preparing a donation, or what details to check before sharing food.</p>
+   <form id="aiQuestionForm">
+    <div class="field"><label for="aiQuestion" data-i18n="aiQuestionLabel">Your question</label><textarea id="aiQuestion" rows="3" maxlength="500" required placeholder="Example: How can I donate extra rice safely?"></textarea></div>
+    <button type="submit" data-i18n="aiAsk">Ask assistant</button>
+   </form>
+   <div id="aiAnswer" aria-live="polite"></div>
+  </div>
+  <div class="card">
+   <h2 data-i18n="aiInsightsTitle">Your Food Waste Insights</h2>
+   <button type="button" class="secondary" onclick="renderAIInsights()" data-i18n="aiRefreshInsights">Refresh insights</button>
+   <div id="aiInsights" class="notice"></div>
+  </div>
+ </section>
+
+ <!-- SMART MESS INTELLIGENCE: local browser-only reports for hostel management -->
+ <section id="messTab" class="hidden">
+  <h1 data-i18n="messTitle">Smart Mess Intelligence</h1>
+  <p class="muted" data-i18n="messIntro">Record meal preparation and leftovers to help hostel management reduce avoidable food waste.</p>
+  <div class="notice warning" data-i18n="messDemoNote">Demo mode: records stay in this browser only. Recommendations are estimates based on your entries, not an AI model or food-safety certification.</div>
+  <div class="card">
+   <h2 data-i18n="messAddTitle">Record a meal</h2>
+   <form id="messForm">
+    <div class="grid">
+     <div class="field"><label for="messDate" data-i18n="messDate">Meal date *</label><input id="messDate" type="date" required></div>
+     <div class="field"><label for="messMeal" data-i18n="messMeal">Meal *</label><select id="messMeal"><option value="Breakfast">Breakfast</option><option value="Lunch">Lunch</option><option value="Snacks">Snacks</option><option value="Dinner">Dinner</option></select></div>
+     <div class="field"><label for="messMenu" data-i18n="messMenu">Main menu / dish *</label><input id="messMenu" required maxlength="100" placeholder="e.g. Rice, dal and vegetables"></div>
+     <div class="field"><label for="messAttendance" data-i18n="messAttendance">Expected / served students *</label><input id="messAttendance" type="number" min="1" step="1" required placeholder="e.g. 300"></div>
+     <div class="field"><label for="messPrepared" data-i18n="messPrepared">Food prepared (kg) *</label><input id="messPrepared" type="number" min="0.01" step="any" required placeholder="e.g. 45"></div>
+     <div class="field"><label for="messLeftover" data-i18n="messLeftover">Leftover food (kg) *</label><input id="messLeftover" type="number" min="0" step="any" required placeholder="e.g. 5"></div>
+     <div class="field"><label for="messReason" data-i18n="messReason">Main reason for leftovers</label><select id="messReason"><option value="Over-preparation">Over-preparation</option><option value="Low attendance">Low attendance</option><option value="Unpopular menu">Unpopular menu</option><option value="Large serving sizes">Large serving sizes</option><option value="Other / unknown">Other / unknown</option></select></div>
+     <div class="field"><label for="messNotes" data-i18n="messNotes">Notes (optional)</label><input id="messNotes" maxlength="250" placeholder="e.g. Lower attendance due to event"></div>
+    </div>
+    <button type="submit" data-i18n="messSave">Save meal record</button>
+   </form>
+  </div>
+  <div class="mess-kpis">
+   <div class="mess-kpi"><span data-i18n="messMealsLogged">Meals recorded</span><strong id="messKpiMeals">0</strong></div>
+   <div class="mess-kpi"><span data-i18n="messPreparedTotal">Food prepared</span><strong id="messKpiPrepared">0 kg</strong></div>
+   <div class="mess-kpi"><span data-i18n="messLeftoverTotal">Food leftover</span><strong id="messKpiLeftover">0 kg</strong></div>
+   <div class="mess-kpi"><span data-i18n="messWasteRate">Leftover rate</span><strong id="messKpiRate">0%</strong></div>
+  </div>
+  <div class="card">
+   <div class="row"><div><h2 data-i18n="messInsightsTitle">Waste insights</h2><p class="muted" data-i18n="messInsightsHelp">Use repeated records to spot patterns. A single meal may not represent a normal day.</p></div><button type="button" class="secondary" onclick="exportMessCSV()" data-i18n="messExport">Export CSV</button></div>
+   <div id="messReasonInsights"></div>
+   <div id="messRecommendation" class="notice" aria-live="polite"></div>
+  </div>
+  <div class="card">
+   <h2 data-i18n="messHistoryTitle">Meal record history</h2>
+   <div class="table-wrap"><table class="mess-table"><thead><tr><th data-i18n="messDate">Date</th><th data-i18n="messMeal">Meal</th><th data-i18n="messMenu">Menu</th><th data-i18n="messAttendance">Students</th><th data-i18n="messPrepared">Prepared (kg)</th><th data-i18n="messLeftover">Leftover (kg)</th><th data-i18n="messWasteRate">Rate</th><th data-i18n="messReason">Reason</th><th data-i18n="action">Action</th></tr></thead><tbody id="messRows"></tbody></table></div>
+   <div id="messEmpty" class="muted" style="padding:14px 0" data-i18n="messEmpty">No meal records yet. Add your first record above.</div>
+  </div>
+ </section>
+
+ <!-- DONATIONS -->
+ <section id="donationsTab" class="hidden">
+  <h1 data-i18n="donationTitle">Share food with someone who needs it</h1>
+  <div class="card">
+   <h2 data-i18n="newDonation">Create a donation</h2>
+   <p class="muted" data-i18n="savedDetailsNote">Your saved name, phone, and address are attached automatically.</p>
+   <form id="donationForm">
+    <div class="grid">
+     <div class="field"><label for="foodName" data-i18n="foodName">Food name *</label><input id="foodName" required maxlength="120"></div>
+     <div class="field"><label for="quantity" data-i18n="quantity">Quantity *</label><input id="quantity" type="number" min="0.01" step="any" required></div>
+     <div class="field"><label for="unit" data-i18n="unit">Unit *</label>
+      <select id="unit"><option value="meals" data-i18n="meals">Meals</option><option value="packs" data-i18n="packs">Packs</option><option value="kg" data-i18n="kg">Kilograms</option><option value="items" data-i18n="items">Items</option></select>
+     </div>
+     <div class="field"><label for="foodType" data-i18n="foodType">Food category *</label>
+      <select id="foodType"><option value="fresh" data-i18n="fresh">Freshly prepared food</option><option value="packaged" data-i18n="packaged">Packaged food</option><option value="produce" data-i18n="produce">Fruits and vegetables</option><option value="dry" data-i18n="dry">Dry staples</option></select>
+     </div>
+     <div class="field"><label for="preparedDate" data-i18n="preparedDate">Prepared / packed date *</label><input id="preparedDate" type="date" required></div>
+     <div class="field"><label for="expiryDate" data-i18n="expiryDate">Use-by / expiry date *</label><input id="expiryDate" type="date" required></div>
+     <div class="field"><label for="pickupTime" data-i18n="pickupTime">Preferred pickup time *</label><input id="pickupTime" type="datetime-local" required></div>
+     <div class="field"><label for="ngoChoice" data-i18n="chooseNgo">Preferred NGO *</label>
+      <select id="ngoChoice">
+       <option>Robin Hood Army</option><option>Feeding India</option><option>No Food Waste</option><option>India FoodBanking Network</option><option>Akshaya Patra Foundation</option><option>Other NGO</option>
+      </select>
+     </div>
+    </div>
+    <div class="field"><label for="foodNotes" data-i18n="foodNotes">Storage / ingredients / allergen notes</label><textarea id="foodNotes" rows="3" maxlength="500"></textarea></div>
+    <div class="field"><label><input id="safetyCheck" type="checkbox" required style="width:auto"><span data-i18n="safetyCheck">I confirm the food is safe to donate and not expired or spoiled.</span></label></div>
+    <button type="submit" data-i18n="submitDonation">Submit donation</button>
+   </form>
+  </div>
+  <div id="donationMessage" aria-live="polite"></div>
+ </section>
+
+ <!-- TRACKING -->
+ <section id="trackingTab" class="hidden">
+  <h1 data-i18n="trackingTitle">Track your donations</h1>
+  <p class="muted" data-i18n="trackingIntro">A donation becomes Approved only after an NGO accepts it.</p>
+  <div id="trackingList"></div>
+ </section>
+
+ <!-- NGO DEMO DESK -->
+ <section id="ngoTab" class="hidden">
+  <h1 data-i18n="ngoTitle">NGO review desk</h1>
+  <div class="notice warning" data-i18n="demoNgoNote">Demo mode: this does not send a real request to an NGO.</div>
+  <div id="ngoList"></div>
+ </section>
+
+ <!-- IMPACT -->
+ <section id="impactTab" class="hidden">
+  <h1 data-i18n="impact">Impact Analytics</h1>
+  <div class="stats">
+   <div class="stat"><span data-i18n="totalDonations">Donations</span><strong id="impactTotal">0</strong></div>
+   <div class="stat"><span data-i18n="approved">Approved</span><strong id="impactApproved">0</strong></div>
+   <div class="stat"><span data-i18n="collected">Collected</span><strong id="impactCollected">0</strong></div>
+   <div class="stat"><span data-i18n="foodTracked">Inventory entries</span><strong id="impactInventory">0</strong></div>
+  </div>
+  <div class="card">
+   <h3 data-i18n="kindnessTitle">Every contribution matters 💚</h3>
+   <p data-i18n="kindnessText">Your actions can help reduce food waste and support people who need food.</p>
+  </div>
+ </section>
+</section>
+</main>
+<footer data-i18n="footer">FreshStart • Share food, spread kindness.</footer>
+
+<script>
+const T = {
+en:{
+tagline:"Share food. Reduce waste. Spread hope.",languageLabel:"Language",
+profileTitle:"Let's set up your profile",profileIntro:"Add your contact and address details once. They will be used for donations and pickup tracking.",
+privacyNote:"Demo information is stored in this browser. A real app needs secure login and a protected database.",
+fullName:"Full name *",phone:"Phone number *",email:"Email (optional)",role:"I am a *",donor:"Food donor",ngoRole:"NGO representative (demo)",
+address:"House / building, street, and area *",city:"City / town *",state:"State *",pincode:"PIN code *",landmark:"Nearby landmark (optional)",
+coordinates:"Map coordinates (optional)",mapHint:"Optional map coordinates can improve location accuracy.",saveProfile:"Save profile and continue",
+editProfile:"Edit profile",mapNote:"Your saved address is used for pickup. Verify the location with the NGO before handing over food.",
+dashboard:"Dashboard",inventory:"Food Inventory",donations:"Donations",tracking:"Tracking",ngoDesk:"NGO desk",impact:"Impact Analytics",
+dashboardTitle:"Your food-sharing dashboard",inventoryCount:"Food items tracked",expiringSoon:"Expiring soon",totalDonations:"Your donations",collected:"Collected",
+howItWorks:"How FreshStart works",step1:"1. Save your profile and pickup address.",step2:"2. Track expiry dates and add food donations.",
+step3:"3. The donation waits for NGO review.",step4:"4. Tracking shows Approved only after NGO approval.",step5:"5. Coordinate pickup and mark it collected.",
+safety:"Food safety: never donate expired, spoiled, contaminated, or improperly stored food.",
+inventoryIntro:"Add food details and monitor expiry dates.",addFood:"Add Food Item",foodName:"Food Name",category:"Category",
+catProduce:"Fruits & Vegetables",catDairy:"Dairy Products",catGrains:"Grains & Staples",catCooked:"Cooked Food",catPackaged:"Packaged Food",catOther:"Other",
+quantity:"Quantity",unit:"Unit",kg:"Kilograms",grams:"Grams",litres:"Litres",packs:"Packs",pieces:"Pieces",expiryDate:"Expiry Date",
+storageNotes:"Storage Notes",addFoodButton:"Add Food",inventoryList:"Your Food Inventory",refresh:"Refresh",
+reminderInfo:"Items expiring within three days are highlighted. Expired items are marked clearly.",
+donationTitle:"Share food with someone who needs it",newDonation:"Create a donation",savedDetailsNote:"Your saved name, phone, and address are attached automatically.",
+meals:"Meals",items:"Items",foodType:"Food category *",fresh:"Freshly prepared food",packaged:"Packaged food",produce:"Fruits and vegetables",dry:"Dry staples",
+preparedDate:"Prepared / packed date *",pickupTime:"Preferred pickup time *",chooseNgo:"Preferred NGO *",foodNotes:"Storage / ingredients / allergen notes",
+safetyCheck:"I confirm the food is safe to donate, properly stored, and not expired or spoiled.",submitDonation:"Submit donation",
+trackingTitle:"Track your donations",trackingIntro:"A donation becomes Approved only after an NGO accepts it.",
+ngoTitle:"NGO review desk",demoNgoNote:"Demo mode: this does not send a real request to an NGO.",
+footer:"FreshStart • Share food, spread kindness.",welcome:"Welcome",profileSaved:"Profile saved successfully.",
+donationThanks:"Thank you for sharing kindness! 💚",donationThanksText:"Your donation has been submitted for NGO review. Your generosity could help someone have a meal and reduce food waste. Thank you for making a difference!",
+pendingApproval:"Pending NGO approval. It will show Approved only after the NGO accepts it.",noDonations:"No donations yet.",
+donorDetails:"Donor and pickup details",foodDetails:"Food details",status:"Status",pickupAddress:"Pickup address",map:"Open in Maps",
+approve:"Accept donation",reject:"Decline",markCollected:"Mark as collected",id:"Donation ID",ngo:"NGO",pickup:"Pickup time",notes:"Notes",
+approvedMessage:"The NGO accepted this donation. Status is now Approved.",rejectedMessage:"The NGO declined this donation.",
+collectedMessage:"Donation marked as collected.",pendingStatus:"Pending NGO approval",approved:"Approved",rejectedStatus:"Declined by NGO",
+collectedStatus:"Collected",expired:"Expired",expiresToday:"Expires today",expiresTomorrow:"Expires tomorrow",expiring:"Expiring soon",
+safe:"Not expired",noInventory:"No food items have been added yet.",delete:"Delete",confirmDelete:"Delete this food item?",
+expiredWarning:"Some inventory items have expired. Do not donate them.",todayWarning:"Some items expire today. Check them immediately.",
+soonWarning:"Some items will expire within three days.",invalidExpiry:"Please choose a valid expiry date.",invalidDates:"Check the food dates. Expiry cannot be in the past or before preparation.",
+invalidPickup:"Choose a valid future pickup time.",required:"Please complete all required fields.",confirmReject:"Decline this donation?",
+emptyNotes:"None provided",noPending:"There are no pending donations.",demoOnly:"Demo only — not sent to a real NGO",
+impactText:"Your actions can help reduce food waste and support people who need food.",kindnessTitle:"Every contribution matters 💚",
+kindnessText:"Your actions can help reduce food waste and support people who need food.",foodTracked:"Inventory entries",noAddress:"No address provided"
+},
+te:{
+tagline:"ఆహారాన్ని పంచండి. వృథాను తగ్గించండి. ఆశను పంచండి.",languageLabel:"భాష",
+profileTitle:"మీ ప్రొఫైల్‌ను సెట్ చేసుకుందాం",profileIntro:"మీ పేరు, సంప్రదింపు వివరాలు, చిరునామాను నమోదు చేయండి.",
+privacyNote:"ఈ డెమోలో సమాచారం ఈ బ్రౌజర్‌లో నిల్వ అవుతుంది.",fullName:"పూర్తి పేరు *",phone:"ఫోన్ నంబర్ *",email:"ఇమెయిల్ (ఐచ్ఛికం)",role:"మీరు ఎవరు? *",donor:"ఆహార దాత",ngoRole:"NGO ప్రతినిధి (డెమో)",
+address:"ఇల్లు, వీధి, ప్రాంతం *",city:"నగరం *",state:"రాష్ట్రం *",pincode:"పిన్ కోడ్ *",landmark:"దగ్గరలోని గుర్తు",coordinates:"మ్యాప్ కోఆర్డినేట్లు",mapHint:"ఖచ్చితమైన స్థానం కోసం మ్యాప్ కోఆర్డినేట్లు జోడించవచ్చు.",
+saveProfile:"ప్రొఫైల్ సేవ్ చేయండి",editProfile:"ప్రొఫైల్ మార్చండి",mapNote:"పికప్ కోసం సేవ్ చేసిన చిరునామా ఉపయోగించబడుతుంది.",
+dashboard:"డాష్‌బోర్డ్",inventory:"ఆహార నిల్వ",donations:"విరాళాలు",tracking:"ట్రాకింగ్",ngoDesk:"NGO విభాగం",impact:"ప్రభావ విశ్లేషణ",
+dashboardTitle:"మీ ఆహార భాగస్వామ్య డాష్‌బోర్డ్",inventoryCount:"ట్రాక్ చేస్తున్న ఆహారాలు",expiringSoon:"గడువు దగ్గరలో ఉంది",totalDonations:"మీ విరాళాలు",collected:"సేకరించినవి",
+howItWorks:"FreshStart ఎలా పనిచేస్తుంది",step1:"1. ప్రొఫైల్, పికప్ చిరునామాను సేవ్ చేయండి.",step2:"2. గడువు తేదీలను పరిశీలించి విరాళాలు జోడించండి.",
+step3:"3. NGO పరిశీలన కోసం విరాళం వేచి ఉంటుంది.",step4:"4. NGO అంగీకరించిన తర్వాతే ఆమోదించబడుతుంది.",step5:"5. పికప్‌ను సమన్వయం చేసి సేకరించినదిగా గుర్తించండి.",
+safety:"గడువు ముగిసిన లేదా పాడైన ఆహారాన్ని దానం చేయవద్దు.",inventoryIntro:"ఆహార వివరాలను జోడించి గడువు తేదీలను పరిశీలించండి.",
+addFood:"ఆహార పదార్థాన్ని జోడించండి",foodName:"ఆహారం పేరు",category:"వర్గం",catProduce:"పండ్లు, కూరగాయలు",catDairy:"పాల ఉత్పత్తులు",catGrains:"ధాన్యాలు",catCooked:"వండిన ఆహారం",catPackaged:"ప్యాక్ చేసిన ఆహారం",catOther:"ఇతర",
+quantity:"పరిమాణం",unit:"యూనిట్",kg:"కిలోగ్రాములు",grams:"గ్రాములు",litres:"లీటర్లు",packs:"ప్యాకెట్లు",pieces:"ముక్కలు",expiryDate:"గడువు తేదీ",storageNotes:"నిల్వ గమనికలు",addFoodButton:"ఆహారం జోడించండి",inventoryList:"మీ ఆహార నిల్వ",refresh:"రిఫ్రెష్",
+reminderInfo:"మూడు రోజుల్లో గడువు ముగిసే పదార్థాలను హైలైట్ చేస్తుంది.",donationTitle:"అవసరమైన వారికి ఆహారాన్ని పంచండి",newDonation:"కొత్త విరాళం",savedDetailsNote:"సేవ్ చేసిన పేరు, ఫోన్, చిరునామా ఆటోమేటిక్‌గా జోడించబడతాయి.",
+foodType:"ఆహార వర్గం",fresh:"తాజా ఆహారం",packaged:"ప్యాక్ చేసిన ఆహారం",produce:"పండ్లు, కూరగాయలు",dry:"పొడి ఆహారం",meals:"భోజనాలు",items:"వస్తువులు",
+preparedDate:"తయారు చేసిన తేదీ",pickupTime:"పికప్ సమయం",chooseNgo:"ఎంచుకున్న NGO",foodNotes:"నిల్వ, పదార్థాలు, అలర్జీ వివరాలు",safetyCheck:"ఆహారం సురక్షితమైనది, గడువు ముగియలేదు అని నిర్ధారిస్తున్నాను.",
+submitDonation:"విరాళం సమర్పించండి",trackingTitle:"మీ విరాళాలను ట్రాక్ చేయండి",trackingIntro:"NGO అంగీకరించిన తర్వాతే ఆమోదించబడుతుంది.",ngoTitle:"NGO పరిశీలన",demoNgoNote:"డెమో మాత్రమే; నిజమైన NGOకు అభ్యర్థన పంపదు.",
+footer:"FreshStart • ఆహారాన్ని పంచండి.",welcome:"స్వాగతం",profileSaved:"ప్రొఫైల్ సేవ్ చేయబడింది.",donationThanks:"మీ దయకు ధన్యవాదాలు! 💚",donationThanksText:"మీ విరాళం NGO పరిశీలనకు పంపబడింది. మీ సహాయం ఎవరికైనా భోజనం అందించడంలో, ఆహార వృథాను తగ్గించడంలో ఉపయోగపడవచ్చు.",
+pendingApproval:"NGO ఆమోదం కోసం వేచి ఉంది.",noDonations:"ఇంకా విరాళాలు లేవు.",donorDetails:"దాత, పికప్ వివరాలు",foodDetails:"ఆహార వివరాలు",status:"స్థితి",pickupAddress:"పికప్ చిరునామా",map:"మ్యాప్‌లో తెరవండి",
+approve:"అంగీకరించండి",reject:"తిరస్కరించండి",markCollected:"సేకరించినదిగా గుర్తించండి",id:"విరాళం ID",ngo:"NGO",pickup:"పికప్ సమయం",notes:"గమనికలు",
+approvedMessage:"NGO విరాళాన్ని అంగీకరించింది.",rejectedMessage:"NGO విరాళాన్ని తిరస్కరించింది.",collectedMessage:"విరాళం సేకరించబడింది.",pendingStatus:"NGO ఆమోదం కోసం వేచి ఉంది",approved:"ఆమోదించబడింది",rejectedStatus:"తిరస్కరించబడింది",collectedStatus:"సేకరించబడింది",
+expired:"గడువు ముగిసింది",expiresToday:"ఈరోజే గడువు",expiresTomorrow:"రేపు గడువు",expiring:"గడువు త్వరలో",safe:"గడువు ముగియలేదు",noInventory:"ఇంకా ఆహార పదార్థాలు జోడించలేదు.",delete:"తొలగించండి",confirmDelete:"ఈ పదార్థాన్ని తొలగించాలా?",
+expiredWarning:"కొన్ని పదార్థాల గడువు ముగిసింది. వాటిని దానం చేయవద్దు.",todayWarning:"కొన్ని పదార్థాల గడువు ఈరోజే ముగుస్తుంది.",soonWarning:"కొన్ని పదార్థాల గడువు మూడు రోజుల్లో ముగుస్తుంది.",
+invalidExpiry:"సరైన గడువు తేదీని ఎంచుకోండి.",invalidDates:"ఆహార తేదీలను తనిఖీ చేయండి.",invalidPickup:"భవిష్యత్తులోని పికప్ సమయాన్ని ఎంచుకోండి.",required:"అవసరమైన వివరాలను నమోదు చేయండి.",confirmReject:"ఈ విరాళాన్ని తిరస్కరించాలా?",emptyNotes:"ఏమీ ఇవ్వలేదు",noPending:"పెండింగ్ విరాళాలు లేవు.",demoOnly:"డెమో మాత్రమే — నిజమైన NGOకు పంపలేదు",impactText:"మీ చర్యలు ఆహార వృథాను తగ్గించడంలో సహాయపడతాయి.",kindnessTitle:"ప్రతి సహాయం విలువైనది 💚",kindnessText:"మీ చర్యలు ఆహార వృథాను తగ్గించి అవసరమైన వారికి సహాయం చేస్తాయి.",foodTracked:"నిల్వ నమోదు",noAddress:"చిరునామా లేదు"
+},
+hi:{
+tagline:"भोजन बाँटें। बर्बादी घटाएँ। आशा फैलाएँ।",languageLabel:"भाषा",
+profileTitle:"अपनी प्रोफ़ाइल बनाएँ",profileIntro:"अपना नाम, संपर्क और पता दर्ज करें।",privacyNote:"डेमो की जानकारी इसी ब्राउज़र में सेव होती है।",
+fullName:"पूरा नाम *",phone:"फ़ोन नंबर *",email:"ईमेल (वैकल्पिक)",role:"आप कौन हैं? *",donor:"भोजन दाता",ngoRole:"NGO प्रतिनिधि (डेमो)",
+address:"मकान, सड़क और क्षेत्र *",city:"शहर *",state:"राज्य *",pincode:"पिन कोड *",landmark:"पास का लैंडमार्क",coordinates:"मैप निर्देशांक",mapHint:"सटीक स्थान के लिए मैप निर्देशांक जोड़ें।",
+saveProfile:"प्रोफ़ाइल सेव करें",editProfile:"प्रोफ़ाइल बदलें",mapNote:"पिकअप के लिए सेव किया गया पता उपयोग होगा।",
+dashboard:"डैशबोर्ड",inventory:"खाद्य सूची",donations:"दान",tracking:"ट्रैकिंग",ngoDesk:"NGO डेस्क",impact:"प्रभाव विश्लेषण",
+dashboardTitle:"आपका भोजन-साझाकरण डैशबोर्ड",inventoryCount:"ट्रैक किए गए खाद्य पदार्थ",expiringSoon:"जल्द एक्सपायर होंगे",totalDonations:"आपके दान",collected:"एकत्रित",
+howItWorks:"FreshStart कैसे काम करता है",step1:"1. प्रोफ़ाइल और पिकअप पता सेव करें।",step2:"2. एक्सपायरी तारीखें देखें और दान जोड़ें.",
+step3:"3. दान NGO की समीक्षा का इंतज़ार करेगा।",step4:"4. NGO के स्वीकार करने पर ही स्वीकृत होगा।",step5:"5. पिकअप का समन्वय करें और पूरा होने पर एकत्रित चिह्नित करें।",
+safety:"एक्सपायर या खराब भोजन दान न करें।",inventoryIntro:"भोजन का विवरण जोड़ें और एक्सपायरी तारीखों पर नज़र रखें.",
+addFood:"खाद्य पदार्थ जोड़ें",foodName:"भोजन का नाम",category:"श्रेणी",catProduce:"फल और सब्ज़ियाँ",catDairy:"डेयरी उत्पाद",catGrains:"अनाज",catCooked:"पका हुआ भोजन",catPackaged:"पैक किया हुआ भोजन",catOther:"अन्य",
+quantity:"मात्रा",unit:"इकाई",kg:"किलोग्राम",grams:"ग्राम",litres:"लीटर",packs:"पैकेट",pieces:"टुकड़े",expiryDate:"एक्सपायरी तारीख",storageNotes:"भंडारण संबंधी नोट",addFoodButton:"भोजन जोड़ें",inventoryList:"आपकी खाद्य सूची",refresh:"रिफ्रेश",
+reminderInfo:"तीन दिनों के भीतर एक्सपायर होने वाले आइटम हाइलाइट होंगे.",donationTitle:"ज़रूरतमंद लोगों के साथ भोजन बाँटें",newDonation:"नया दान",savedDetailsNote:"आपका नाम, फ़ोन और पता अपने आप जुड़ेंगे।",
+foodType:"भोजन का प्रकार",fresh:"ताज़ा बना भोजन",packaged:"पैक भोजन",produce:"फल और सब्ज़ियाँ",dry:"सूखी खाद्य सामग्री",meals:"भोजन",items:"वस्तुएँ",
+preparedDate:"बनाने की तारीख",pickupTime:"पिकअप का समय",chooseNgo:"पसंदीदा NGO",foodNotes:"भंडारण, सामग्री और एलर्जी की जानकारी",safetyCheck:"मैं पुष्टि करता/करती हूँ कि भोजन सुरक्षित है और एक्सपायर या खराब नहीं है।",
+submitDonation:"दान जमा करें",trackingTitle:"अपने दान को ट्रैक करें",trackingIntro:"NGO स्वीकार करने के बाद ही दान स्वीकृत होगा.",ngoTitle:"NGO समीक्षा डेस्क",demoNgoNote:"डेमो: वास्तविक NGO को अनुरोध नहीं भेजा जाता।",
+footer:"FreshStart • भोजन बाँटें, दयालुता फैलाएँ।",welcome:"स्वागत है",profileSaved:"प्रोफ़ाइल सेव हुई।",donationThanks:"आपकी दयालुता के लिए धन्यवाद! 💚",donationThanksText:"आपका दान NGO की समीक्षा के लिए जमा हो गया है। आपकी मदद किसी को भोजन दिलाने और बर्बादी कम करने में सहायक हो सकती है।",
+pendingApproval:"NGO की स्वीकृति लंबित है।",noDonations:"अभी कोई दान नहीं है.",donorDetails:"दाता और पिकअप विवरण",foodDetails:"भोजन का विवरण",status:"स्थिति",pickupAddress:"पिकअप पता",map:"मैप में खोलें",
+approve:"दान स्वीकार करें",reject:"अस्वीकार करें",markCollected:"एकत्रित चिह्नित करें",id:"दान ID",ngo:"NGO",pickup:"पिकअप समय",notes:"टिप्पणियाँ",
+approvedMessage:"NGO ने दान स्वीकार कर लिया है।",rejectedMessage:"NGO ने दान अस्वीकार किया।",collectedMessage:"दान एकत्रित चिह्नित किया गया।",pendingStatus:"NGO की स्वीकृति लंबित",approved:"स्वीकृत",rejectedStatus:"अस्वीकृत",collectedStatus:"एकत्रित",
+expired:"एक्सपायर",expiresToday:"आज एक्सपायर होगा",expiresTomorrow:"कल एक्सपायर होगा",expiring:"जल्द एक्सपायर होगा",safe:"एक्सपायर नहीं हुआ",noInventory:"अभी कोई खाद्य पदार्थ नहीं जोड़ा गया।",delete:"हटाएँ",confirmDelete:"यह खाद्य पदार्थ हटाएँ?",
+expiredWarning:"कुछ खाद्य पदार्थ एक्सपायर हो गए हैं। उन्हें दान न करें।",todayWarning:"कुछ आइटम आज एक्सपायर होंगे।",soonWarning:"कुछ आइटम तीन दिनों में एक्सपायर होंगे।",
+invalidExpiry:"सही एक्सपायरी तारीख चुनें।",invalidDates:"भोजन की तारीखें जाँचें।",invalidPickup:"भविष्य का पिकअप समय चुनें।",required:"सभी आवश्यक विवरण भरें।",confirmReject:"क्या आप इस दान को अस्वीकार करना चाहते हैं?",emptyNotes:"कोई जानकारी नहीं",noPending:"कोई लंबित दान नहीं है।",demoOnly:"केवल डेमो — वास्तविक NGO को नहीं भेजा गया",impactText:"आपके प्रयास भोजन की बर्बादी कम करने में मदद कर सकते हैं.",kindnessTitle:"हर योगदान मायने रखता है 💚",kindnessText:"आपके प्रयास ज़रूरतमंद लोगों की मदद कर सकते हैं.",foodTracked:"खाद्य सूची प्रविष्टियाँ",noAddress:"पता नहीं दिया गया"
+}
+};
+
+
+// Added AI-assistant labels in all three supported languages.
+Object.assign(T.en,{
+ aiTab:"AI Food Assistant",aiTitle:"AI Food Rescue Assistant",aiIntro:"Get practical suggestions for reducing food waste and organizing safe donations.",
+ aiDemoNote:"Prototype mode: suggestions use simple local rules, not a connected generative AI service. Always verify food safety.",
+ aiAdvisorTitle:"Smart Food Action Advisor",aiAdvisorHelp:"Choose an item from your Food Inventory to receive a suggestion based on its expiry date and details.",
+ aiChooseFood:"Choose inventory item",aiAnalyze:"Analyze food",aiChatTitle:"Ask the Food Donation Assistant",aiChatHelp:"Ask about reducing food waste, preparing a donation, or what details to check before sharing food.",
+ aiQuestionLabel:"Your question",aiAsk:"Ask assistant",aiInsightsTitle:"Your Food Waste Insights",aiRefreshInsights:"Refresh insights",aiSelectPrompt:"Choose an item first.",
+ aiNoItems:"No inventory items found. Add food in Food Inventory first.",aiExpired:"This item is past its entered expiry date. Do not donate or consume it based on this app's advice; follow local food-safety guidance and discard it safely.",
+ aiUrgent:"This item expires today or within three days. Check the package, storage history, and condition immediately. If it is safe and eligible for donation, arrange a prompt handover; never donate questionable food.",
+ aiPlan:"This item is not close to its entered expiry date. Store it as directed, check it regularly, and consider sharing it if you have more than you can use.",
+ aiFoodResultTitle:"Suggested next step",aiSafety:"This is a reminder, not a food-safety certification. Expiry dates alone cannot confirm that food is safe.",
+ aiAnswerWaste:"To reduce food waste: plan meals, buy only what you can use, store food according to its label, keep an inventory, and check items approaching expiry first.",
+ aiAnswerDonate:"Before donating, check that the food is not expired or spoiled, was stored safely, and is accepted by the recipient. Share the food type, quantity, preparation/packing time, expiry date, ingredients/allergens, and pickup details. Do not donate food when safety is uncertain.",
+ aiAnswerCooked:"For cooked food, confirm the recipient accepts it, record when it was prepared, keep it at safe temperatures, use clean sealed containers, and arrange prompt pickup. Do not donate food left at unsafe temperatures or of uncertain history.",
+ aiAnswerPackaged:"For packaged food, check the expiry/best-before label, packaging integrity, storage instructions, and whether the recipient accepts that product. Do not share opened, damaged, recalled, or expired packages.",
+ aiAnswerDefault:"I can help with food-waste reduction and donation checklists. Try asking how to donate cooked food safely, what to check on packaged food, or how to reduce household food waste. For actual food-safety decisions, follow local official guidance.",
+ aiInsightEmpty:"Add food to your inventory to get personalized waste-reduction insights.",aiInsightExpired:"You have {n} item(s) past the entered expiry date. Do not donate these items.",aiInsightSoon:"You have {n} item(s) expiring within three days. Review them promptly and only donate if safe and accepted.",aiInsightDonations:"You have submitted {n} donation(s); {c} marked collected in this browser demo.",aiInsightGood:"No inventory items are recorded as expiring within the next three days. Keep checking dates and storage conditions.",aiBasedOn:"Based on the information entered in this browser.",aiNeedQuestion:"Please enter a question."
+});
+Object.assign(T.te,{
+ aiTab:"AI ఆహార సహాయకుడు",aiTitle:"AI ఆహార సహాయకుడు",aiIntro:"ఆహార వృథాను తగ్గించడానికి, సురక్షిత విరాళాలను ఏర్పాటు చేయడానికి సూచనలు పొందండి.",
+ aiDemoNote:"ప్రోటోటైప్: సూచనలు స్థానిక నియమాల ఆధారంగా వస్తాయి; నిజమైన జనరేటివ్ AI సేవకు కనెక్ట్ కాలేదు. ఆహార భద్రతను తప్పనిసరిగా తనిఖీ చేయండి.",
+ aiAdvisorTitle:"ఆహార చర్య సూచన",aiAdvisorHelp:"గడువు తేదీ ఆధారంగా సూచన పొందడానికి మీ ఆహార నిల్వలోని పదార్థాన్ని ఎంచుకోండి.",aiChooseFood:"ఆహార పదార్థాన్ని ఎంచుకోండి",aiAnalyze:"ఆహారాన్ని విశ్లేషించండి",aiChatTitle:"ఆహార విరాళ సహాయకుడిని అడగండి",aiChatHelp:"ఆహార వృథా తగ్గించడం లేదా విరాళం ఇవ్వడానికి ముందు తనిఖీల గురించి అడగండి.",aiQuestionLabel:"మీ ప్రశ్న",aiAsk:"అడగండి",aiInsightsTitle:"మీ ఆహార వృథా విశ్లేషణ",aiRefreshInsights:"విశ్లేషణను రిఫ్రెష్ చేయండి",aiSelectPrompt:"ముందుగా ఒక పదార్థాన్ని ఎంచుకోండి.",aiNoItems:"నిల్వలో పదార్థాలు లేవు. ముందుగా ఆహార నిల్వలో జోడించండి.",aiExpired:"ఈ పదార్థానికి నమోదు చేసిన గడువు ముగిసింది. ఈ యాప్ ఆధారంగా దానం చేయవద్దు లేదా తినవద్దు; స్థానిక ఆహార భద్రత మార్గదర్శకాలను అనుసరించి సురక్షితంగా పారవేయండి.",aiUrgent:"ఈ పదార్థం ఈరోజు లేదా మూడు రోజుల్లో గడువు ముగుస్తుంది. ప్యాకెట్, నిల్వ చరిత్ర, స్థితిని తనిఖీ చేయండి. సురక్షితంగా ఉండి విరాళానికి అర్హమైతే త్వరగా అందించండి; సందేహాస్పద ఆహారాన్ని దానం చేయవద్దు.",aiPlan:"నమోదు చేసిన గడువు దగ్గరలో లేదు. సూచించిన విధంగా నిల్వ చేయండి, తరచూ తనిఖీ చేయండి, అవసరానికి మించినది ఉంటే పంచడాన్ని పరిగణించండి.",aiFoodResultTitle:"సూచించిన తదుపరి చర్య",aiSafety:"ఇది గుర్తుచూపు మాత్రమే, ఆహార భద్రత ధృవీకరణ కాదు. గడువు తేదీ ఒక్కటే ఆహారం సురక్షితమని నిర్ధారించదు.",aiAnswerWaste:"వృథా తగ్గించడానికి భోజనాలను ముందుగా ప్లాన్ చేయండి, అవసరమైనంత మాత్రమే కొనండి, లేబుల్ ప్రకారం నిల్వ చేయండి, నిల్వ జాబితా ఉంచండి, గడువు దగ్గరలో ఉన్న పదార్థాలను ముందుగా తనిఖీ చేయండి.",aiAnswerDonate:"దానం చేసే ముందు ఆహారం గడువు ముగియలేదని, పాడవలేదని, సురక్షితంగా నిల్వ చేశారని, గ్రహీత అంగీకరిస్తారని తనిఖీ చేయండి. ఆహారం రకం, పరిమాణం, తయారీ/ప్యాకింగ్ సమయం, గడువు, పదార్థాలు/అలర్జీలు, పికప్ వివరాలు ఇవ్వండి. భద్రతపై సందేహం ఉంటే దానం చేయవద్దు.",aiAnswerCooked:"వండిన ఆహారం కోసం గ్రహీత అంగీకారాన్ని నిర్ధారించండి, తయారు చేసిన సమయాన్ని నమోదు చేయండి, సురక్షిత ఉష్ణోగ్రతలో ఉంచండి, శుభ్రమైన మూసిన పాత్రలు వాడండి, త్వరగా పికప్ ఏర్పాటు చేయండి. సురక్షితం కాని ఉష్ణోగ్రతలో ఉన్న లేదా చరిత్ర తెలియని ఆహారాన్ని దానం చేయవద్దు.",aiAnswerPackaged:"ప్యాక్ చేసిన ఆహారానికి గడువు/బెస్ట్-బిఫోర్ లేబుల్, ప్యాకెట్ స్థితి, నిల్వ సూచనలు, గ్రహీత అంగీకారాన్ని తనిఖీ చేయండి. తెరిచిన, దెబ్బతిన్న, రీకాల్ చేసిన లేదా గడువు ముగిసిన ప్యాకెట్లను పంచవద్దు.",aiAnswerDefault:"ఆహార వృథా తగ్గించడం, విరాళం చెక్‌లిస్ట్‌లలో సహాయం చేయగలను. వండిన ఆహారాన్ని సురక్షితంగా ఎలా దానం చేయాలి, ప్యాక్ చేసిన ఆహారంలో ఏమి తనిఖీ చేయాలి, ఇంట్లో వృథా ఎలా తగ్గించాలి అని అడగండి. భద్రతకు అధికారిక స్థానిక మార్గదర్శకాలను అనుసరించండి.",aiInsightEmpty:"వ్యక్తిగత సూచనలు పొందడానికి ఆహార నిల్వలో పదార్థాలను జోడించండి.",aiInsightExpired:"నమోదు చేసిన గడువు ముగిసిన పదార్థాలు {n} ఉన్నాయి. వాటిని దానం చేయవద్దు.",aiInsightSoon:"మూడు రోజుల్లో గడువు ముగిసే పదార్థాలు {n} ఉన్నాయి. వెంటనే తనిఖీ చేయండి; సురక్షితంగా, అంగీకారయోగ్యంగా ఉంటేనే దానం చేయండి.",aiInsightDonations:"మీరు {n} విరాళాలు సమర్పించారు; వాటిలో {c} సేకరించబడినట్లు ఈ డెమోలో గుర్తించారు.",aiInsightGood:"తదుపరి మూడు రోజుల్లో గడువు ముగిసే పదార్థాలు నమోదు కాలేదు. తేదీలు, నిల్వ పరిస్థితులు తనిఖీ చేస్తూ ఉండండి.",aiBasedOn:"ఈ బ్రౌజర్‌లో నమోదు చేసిన వివరాల ఆధారంగా.",aiNeedQuestion:"దయచేసి ప్రశ్న నమోదు చేయండి."
+});
+Object.assign(T.hi,{
+ aiTab:"AI खाद्य सहायक",aiTitle:"AI खाद्य बचाव सहायक",aiIntro:"खाद्य बर्बादी कम करने और सुरक्षित दान व्यवस्थित करने के सुझाव पाएँ.",aiDemoNote:"प्रोटोटाइप: सुझाव स्थानीय नियमों पर आधारित हैं, किसी वास्तविक जनरेटिव AI सेवा से कनेक्ट नहीं हैं। खाद्य सुरक्षा हमेशा जाँचें।",aiAdvisorTitle:"खाद्य कार्रवाई सलाहकार",aiAdvisorHelp:"एक्सपायरी तारीख के आधार पर सुझाव पाने के लिए अपनी खाद्य सूची से आइटम चुनें।",aiChooseFood:"खाद्य आइटम चुनें",aiAnalyze:"खाद्य विश्लेषण करें",aiChatTitle:"खाद्य दान सहायक से पूछें",aiChatHelp:"खाद्य बर्बादी कम करने या दान से पहले जाँच के बारे में पूछें।",aiQuestionLabel:"आपका सवाल",aiAsk:"सवाल पूछें",aiInsightsTitle:"आपकी खाद्य बर्बादी जानकारी",aiRefreshInsights:"जानकारी अपडेट करें",aiSelectPrompt:"पहले कोई आइटम चुनें।",aiNoItems:"सूची में कोई आइटम नहीं है। पहले खाद्य सूची में जोड़ें।",aiExpired:"इस आइटम की दर्ज एक्सपायरी तारीख बीत चुकी है। इस ऐप की सलाह के आधार पर इसे दान या सेवन न करें; स्थानीय खाद्य-सुरक्षा मार्गदर्शन के अनुसार सुरक्षित रूप से निपटाएँ।",aiUrgent:"यह आइटम आज या अगले तीन दिनों में एक्सपायर होगा। पैकेज, भंडारण इतिहास और स्थिति जाँचें। सुरक्षित और दान के योग्य होने पर ही जल्दी दान करें; संदिग्ध भोजन दान न करें।",aiPlan:"दर्ज एक्सपायरी तारीख अभी नज़दीक नहीं है। निर्देशानुसार स्टोर करें, नियमित जाँचें और अतिरिक्त भोजन साझा करने पर विचार करें।",aiFoodResultTitle:"अगला सुझाया कदम",aiSafety:"यह केवल रिमाइंडर है, खाद्य-सुरक्षा प्रमाणपत्र नहीं। केवल तारीख से भोजन सुरक्षित साबित नहीं होता।",aiAnswerWaste:"बर्बादी कम करने के लिए भोजन की योजना बनाएँ, ज़रूरत के अनुसार खरीदें, लेबल के अनुसार स्टोर करें, सूची रखें और जल्द एक्सपायर होने वाली चीज़ें पहले जाँचें।",aiAnswerDonate:"दान से पहले जाँचें कि भोजन एक्सपायर या खराब नहीं है, सुरक्षित रूप से रखा गया है और प्राप्तकर्ता उसे स्वीकार करता है। भोजन का प्रकार, मात्रा, तैयारी/पैकिंग समय, एक्सपायरी, सामग्री/एलर्जी और पिकअप विवरण दें। सुरक्षा पर संदेह हो तो दान न करें।",aiAnswerCooked:"पके भोजन के लिए प्राप्तकर्ता की स्वीकृति लें, बनाने का समय लिखें, सुरक्षित तापमान पर रखें, साफ बंद डिब्बे उपयोग करें और जल्दी पिकअप तय करें। असुरक्षित तापमान पर रखा या अज्ञात इतिहास वाला भोजन दान न करें।",aiAnswerPackaged:"पैक भोजन की एक्सपायरी/बेस्ट-बिफोर तारीख, पैकेज की स्थिति, स्टोरेज निर्देश और प्राप्तकर्ता की स्वीकृति जाँचें। खुले, क्षतिग्रस्त, वापस मँगाए गए या एक्सपायर पैकेट साझा न करें।",aiAnswerDefault:"मैं खाद्य बर्बादी कम करने और दान चेकलिस्ट में मदद कर सकता हूँ। पके भोजन को सुरक्षित रूप से कैसे दान करें, पैक भोजन में क्या जाँचें, या घर में बर्बादी कैसे कम करें—ऐसे सवाल पूछें। सुरक्षा के लिए आधिकारिक स्थानीय मार्गदर्शन मानें।",aiInsightEmpty:"व्यक्तिगत सुझाव पाने के लिए खाद्य सूची में आइटम जोड़ें।",aiInsightExpired:"{n} आइटम की दर्ज एक्सपायरी तारीख बीत चुकी है। इन्हें दान न करें।",aiInsightSoon:"{n} आइटम अगले तीन दिनों में एक्सपायर होंगे। जल्दी जाँचें और सुरक्षित होने पर ही दान करें।",aiInsightDonations:"आपने {n} दान जमा किए; इस डेमो में {c} को एकत्रित चिह्नित किया गया है।",aiInsightGood:"अगले तीन दिनों में एक्सपायर होने वाले आइटम दर्ज नहीं हैं। तारीख और भंडारण जाँचते रहें।",aiBasedOn:"इस ब्राउज़र में दर्ज जानकारी पर आधारित।",aiNeedQuestion:"कृपया सवाल लिखें।"
+});
+
+// Smart Mess Intelligence labels (kept in the same three-language selector).
+Object.assign(T.en,{
+ messIntel:"Smart Mess Intelligence",messTitle:"Smart Mess Intelligence",messIntro:"Record meal preparation and leftovers to help hostel management reduce avoidable food waste.",messDemoNote:"Demo mode: records stay in this browser only. Recommendations are estimates based on your entries, not an AI model or food-safety certification.",messAddTitle:"Record a meal",messDate:"Meal date",messMeal:"Meal",messMenu:"Main menu / dish",messAttendance:"Expected / served students",messPrepared:"Food prepared (kg)",messLeftover:"Leftover food (kg)",messReason:"Main reason for leftovers",messNotes:"Notes (optional)",messSave:"Save meal record",messMealsLogged:"Meals recorded",messPreparedTotal:"Food prepared",messLeftoverTotal:"Food leftover",messWasteRate:"Leftover rate",messInsightsTitle:"Waste insights",messInsightsHelp:"Use repeated records to spot patterns. A single meal may not represent a normal day.",messExport:"Export CSV",messRecommendationTitle:"Preparation recommendation",messHistoryTitle:"Meal record history",messEmpty:"No meal records yet. Add your first record above.",action:"Action",messDelete:"Delete",messConfirmDelete:"Delete this meal record?",messValidation:"Leftover quantity cannot be greater than the quantity prepared.",messNeedHistory:"Record a few meals for the same meal period to get a useful preparation estimate.",messNoReasonData:"Reason analysis will appear after you save meal records.",messReasonBreakdown:"Leftovers by reported reason",messLast7:"Last 7 days",messAllTime:"All recorded meals",messEstimate:"Estimated next preparation",messEstimateText:"Based on previous consumption for this meal/menu and expected attendance. Treat this as a starting estimate and adjust for the menu, weather, events, and appetite.",messNoRecords:"No meal records yet.",messExported:"CSV export started.",messKg:"kg",messStudentUnit:"students",messLeftoverLabel:"leftover",messConsumedLabel:"consumed",messRateLabel:"leftover rate"
+});
+Object.assign(T.te,{
+ messIntel:"స్మార్ట్ మెస్ విశ్లేషణ",messTitle:"స్మార్ట్ మెస్ విశ్లేషణ",messIntro:"హాస్టల్ ఆహార వృథాను తగ్గించేందుకు భోజన తయారీ, మిగిలిన ఆహారాన్ని నమోదు చేయండి.",messDemoNote:"డెమో: రికార్డులు ఈ బ్రౌజర్‌లోనే ఉంటాయి. సూచనలు నమోదు చేసిన వివరాల ఆధారంగా అంచనాలు మాత్రమే.",messAddTitle:"భోజన వివరాలు నమోదు చేయండి",messDate:"భోజన తేదీ",messMeal:"భోజనం",messMenu:"మెనూ / వంటకం",messAttendance:"అంచనా / హాజరైన విద్యార్థులు",messPrepared:"తయారు చేసిన ఆహారం (కిలోలు)",messLeftover:"మిగిలిన ఆహారం (కిలోలు)",messReason:"మిగిలిన ఆహారానికి ప్రధాన కారణం",messNotes:"గమనికలు (ఐచ్ఛికం)",messSave:"భోజన రికార్డు సేవ్ చేయండి",messMealsLogged:"నమోదైన భోజనాలు",messPreparedTotal:"తయారు చేసిన ఆహారం",messLeftoverTotal:"మిగిలిన ఆహారం",messWasteRate:"మిగిలిన శాతం",messInsightsTitle:"వృథా విశ్లేషణ",messInsightsHelp:"పునరావృత రికార్డులతో నమూనాలను గుర్తించండి.",messExport:"CSV ఎగుమతి",messRecommendationTitle:"తయారీ సూచన",messHistoryTitle:"భోజన రికార్డులు",messEmpty:"ఇంకా రికార్డులు లేవు. మొదటి రికార్డును జోడించండి.",action:"చర్య",messDelete:"తొలగించు",messConfirmDelete:"ఈ రికార్డును తొలగించాలా?",messValidation:"మిగిలిన పరిమాణం తయారు చేసిన పరిమాణం కంటే ఎక్కువ ఉండకూడదు.",messNeedHistory:"సూచన కోసం ఒకే భోజన సమయానికి కొన్ని రికార్డులు జోడించండి.",messNoReasonData:"రికార్డులు సేవ్ చేసిన తర్వాత కారణాల విశ్లేషణ కనిపిస్తుంది.",messReasonBreakdown:"కారణాల వారీగా మిగిలిన ఆహారం",messLast7:"గత 7 రోజులు",messAllTime:"అన్ని రికార్డులు",messEstimate:"తదుపరి తయారీ అంచనా",messEstimateText:"గత వినియోగం, అంచనా హాజరు ఆధారంగా లెక్కించబడింది. అవసరానికి అనుగుణంగా సవరించండి.",messNoRecords:"ఇంకా రికార్డులు లేవు.",messExported:"CSV ఎగుమతి ప్రారంభమైంది.",messKg:"కిలోలు",messStudentUnit:"విద్యార్థులు",messLeftoverLabel:"మిగిలినది",messConsumedLabel:"వినియోగించినది",messRateLabel:"మిగిలిన శాతం"
+});
+Object.assign(T.hi,{
+ messIntel:"स्मार्ट मेस विश्लेषण",messTitle:"स्मार्ट मेस विश्लेषण",messIntro:"हॉस्टल में भोजन की बर्बादी कम करने के लिए तैयार भोजन और बचा भोजन दर्ज करें।",messDemoNote:"डेमो: रिकॉर्ड केवल इसी ब्राउज़र में रहते हैं। सुझाव दर्ज किए गए आँकड़ों पर आधारित अनुमान हैं।",messAddTitle:"भोजन रिकॉर्ड करें",messDate:"भोजन की तारीख",messMeal:"भोजन का समय",messMenu:"मुख्य मेनू / व्यंजन",messAttendance:"अनुमानित / उपस्थित छात्र",messPrepared:"तैयार भोजन (किलो)",messLeftover:"बचा भोजन (किलो)",messReason:"बचे भोजन का मुख्य कारण",messNotes:"नोट (वैकल्पिक)",messSave:"भोजन रिकॉर्ड सेव करें",messMealsLogged:"दर्ज भोजन",messPreparedTotal:"तैयार भोजन",messLeftoverTotal:"बचा भोजन",messWasteRate:"बचे भोजन का प्रतिशत",messInsightsTitle:"बर्बादी की जानकारी",messInsightsHelp:"बार-बार के रिकॉर्ड से पैटर्न पहचानें।",messExport:"CSV एक्सपोर्ट",messRecommendationTitle:"भोजन तैयारी सुझाव",messHistoryTitle:"भोजन रिकॉर्ड इतिहास",messEmpty:"अभी कोई रिकॉर्ड नहीं है। पहला रिकॉर्ड जोड़ें।",action:"कार्रवाई",messDelete:"हटाएँ",messConfirmDelete:"यह रिकॉर्ड हटाएँ?",messValidation:"बचा भोजन, तैयार भोजन से अधिक नहीं हो सकता।",messNeedHistory:"अच्छे अनुमान के लिए एक ही भोजन समय के कुछ रिकॉर्ड जोड़ें।",messNoReasonData:"रिकॉर्ड सेव होने के बाद कारण विश्लेषण दिखाई देगा।",messReasonBreakdown:"कारण के अनुसार बचा भोजन",messLast7:"पिछले 7 दिन",messAllTime:"सभी रिकॉर्ड",messEstimate:"अगली तैयारी का अनुमान",messEstimateText:"पिछले उपभोग और अनुमानित उपस्थिति पर आधारित। आवश्यकता के अनुसार बदलें।",messNoRecords:"अभी कोई रिकॉर्ड नहीं है।",messExported:"CSV एक्सपोर्ट शुरू हुआ।",messKg:"किलो",messStudentUnit:"छात्र",messLeftoverLabel:"बचा",messConsumedLabel:"उपभोग हुआ",messRateLabel:"बचा भोजन प्रतिशत"
+});
+
+let lang=localStorage.getItem("fs_lang")||"en";
+let profile=read("fs_profile",null);
+let donations=read("fs_donations",[]);
+let inventory=read("fs_inventory",[]);
+let messLogs=read("fs_mess_logs",[]);
+let activeTab="dashboard";
+
+function read(key,fallback){try{const x=localStorage.getItem(key);return x===null?fallback:JSON.parse(x)}catch{return fallback}}
+function save(){
+ localStorage.setItem("fs_profile",JSON.stringify(profile));
+ localStorage.setItem("fs_donations",JSON.stringify(donations));
+ localStorage.setItem("fs_inventory",JSON.stringify(inventory));
+ localStorage.setItem("fs_mess_logs",JSON.stringify(messLogs));
+ localStorage.setItem("fs_lang",lang);
+}
+function t(key){return (T[lang]&&T[lang][key])||T.en[key]||key}
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function categoryName(v){
+ const map={produce:"catProduce",dairy:"catDairy",grains:"catGrains",cooked:"catCooked",packaged:"catPackaged",other:"catOther"};
+ return t(map[v]||"catOther")
+}
+function changeLanguage(value){
+ lang=T[value]?value:"en";save();applyTranslations();refresh();
+}
+function applyTranslations(){
+ document.documentElement.lang=lang;
+ document.getElementById("language").value=lang;
+ document.querySelectorAll("[data-i18n]").forEach(el=>{
+  const key=el.getAttribute("data-i18n");
+  if(T[lang][key])el.textContent=t(key);
+ });
+ document.getElementById("tagline").textContent=t("tagline");
+ document.getElementById("languageLabel").textContent=t("languageLabel");
+ document.querySelectorAll("option[data-i18n]").forEach(el=>el.textContent=t(el.dataset.i18n));
+}
+function showProfilePage(){
+ document.getElementById("profilePage").classList.remove("hidden");
+ document.getElementById("appPage").classList.add("hidden");
+}
+function showAppPage(){
+ document.getElementById("profilePage").classList.add("hidden");
+ document.getElementById("appPage").classList.remove("hidden");
+}
+function fullAddress(p=profile){
+ return p?[p.address,p.landmark,p.city,p.state,p.pincode].filter(Boolean).join(", "):"";
+}
+function fillProfile(){
+ ["fullName","phone","email","role","address","city","state","pincode","landmark","coordinates"].forEach(id=>{
+  document.getElementById(id).value=profile?.[id]||(id==="role"?"donor":"");
+ });
+}
+function editProfile(){fillProfile();showProfilePage()}
+document.getElementById("profileForm").addEventListener("submit",e=>{
+ e.preventDefault();
+ const p={};
+ ["fullName","phone","email","role","address","city","state","pincode","landmark","coordinates"].forEach(id=>p[id]=document.getElementById(id).value.trim());
+ if(!p.fullName||!p.phone||!p.address||!p.city||!p.state||!p.pincode){alert(t("required"));return}
+ profile=p;save();showAppPage();applyTranslations();showTab("dashboard");alert(t("profileSaved"));
+});
+function showTab(tab){
+ activeTab=tab;
+ ["dashboard","inventory","donations","tracking","ngo","impact","ai","mess"].forEach(n=>document.getElementById(n+"Tab").classList.toggle("hidden",n!==tab));
+ document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));
+ refresh();
+}
+function todayString(){
+ const d=new Date();d.setHours(0,0,0,0);
+ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function daysUntil(date){
+ const d=new Date(date+"T00:00:00");
+ const now=new Date();now.setHours(0,0,0,0);
+ return Math.round((d-now)/86400000);
+}
+function expiryStatus(item){
+ const days=daysUntil(item.expiry);
+ if(days<0)return {key:"expired",className:"expired"};
+ if(days===0)return {key:"expiresToday",className:"expired"};
+ if(days===1)return {key:"expiresTomorrow",className:"soon"};
+ if(days<=3)return {key:"expiring",className:"soon"};
+ return {key:"safe",className:"safe"};
+}
+document.getElementById("inventoryForm").addEventListener("submit",e=>{
+ e.preventDefault();
+ const name=document.getElementById("invName").value.trim();
+ const quantity=Number(document.getElementById("invQuantity").value);
+ const expiry=document.getElementById("invExpiry").value;
+ if(!name||!Number.isFinite(quantity)||quantity<=0||!expiry){alert(t("required"));return}
+ if(expiry<todayString()){alert(t("invalidExpiry"));return}
+ inventory.push({
+  id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+  owner:profile.phone,name,category:document.getElementById("invCategory").value,
+  quantity,unit:document.getElementById("invUnit").value,expiry,
+  notes:document.getElementById("invNotes").value.trim(),created:new Date().toISOString()
+ });
+ save();document.getElementById("inventoryForm").reset();refresh();
+ document.getElementById("invName").focus();
+});
+function deleteFood(id){
+ if(!confirm(t("confirmDelete")))return;
+ inventory=inventory.filter(x=>x.id!==id);save();refresh();
+}
+function renderInventory(){
+ const mine=inventory.filter(x=>x.owner===profile.phone);
+ const alerts=document.getElementById("inventoryAlerts");
+ const expired=mine.filter(x=>daysUntil(x.expiry)<0);
+ const today=mine.filter(x=>daysUntil(x.expiry)===0);
+ const soon=mine.filter(x=>daysUntil(x.expiry)>0&&daysUntil(x.expiry)<=3);
+ let alertHtml="";
+ if(expired.length)alertHtml+=`<div class="notice error">⚠️ ${esc(t("expiredWarning"))} (${expired.length})</div>`;
+ if(today.length)alertHtml+=`<div class="notice warning">⏰ ${esc(t("todayWarning"))} (${today.length})</div>`;
+ if(soon.length)alertHtml+=`<div class="notice warning">🔔 ${esc(t("soonWarning"))} (${soon.length})</div>`;
+ alerts.innerHTML=alertHtml;
+ document.getElementById("inventoryList").innerHTML=mine.length?`
+ <div class="table-wrap"><table><thead><tr>
+ <th>${esc(t("foodName"))}</th><th>${esc(t("category"))}</th><th>${esc(t("quantity"))}</th>
+ <th>${esc(t("expiryDate"))}</th><th>${esc(t("storageNotes"))}</th><th>${esc(t("status"))}</th><th>${esc(t("delete"))}</th>
+ </tr></thead><tbody>${mine.slice().sort((a,b)=>a.expiry.localeCompare(b.expiry)).map(x=>{
+ const st=expiryStatus(x);
+ return `<tr><td>${esc(x.name)}</td><td>${esc(categoryName(x.category))}</td>
+ <td>${esc(x.quantity)} ${esc(t(x.unit==="kg"?"kg":x.unit==="g"?"grams":x.unit==="litre"?"litres":x.unit==="pack"?"packs":"pieces"))}</td>
+ <td>${esc(x.expiry)}</td><td>${esc(x.notes||t("emptyNotes"))}</td>
+ <td><span class="badge ${st.className}">${esc(t(st.key))}</span></td>
+ <td><button class="danger" onclick="deleteFood('${esc(x.id)}')">${esc(t("delete"))}</button></td></tr>`;
+ }).join("")}</tbody></table></div>`:`<div class="notice">${esc(t("noInventory"))}</div>`;
+}
+function renderAISelector(){
+ const select=document.getElementById("aiFoodSelect");
+ if(!select)return;
+ const mine=inventory.filter(x=>x.owner===profile?.phone);
+ const previous=select.value;
+ select.innerHTML=mine.length?mine.slice().sort((a,b)=>a.expiry.localeCompare(b.expiry)).map(x=>`<option value="${esc(x.id)}">${esc(x.name)} — ${esc(x.expiry)} (${esc(x.quantity)} ${esc(x.unit)})</option>`).join(""):`<option value="">${esc(t("aiNoItems"))}</option>`;
+ if(mine.some(x=>x.id===previous))select.value=previous;
+}
+function analyzeSelectedFood(){
+ const id=document.getElementById("aiFoodSelect").value;
+ const item=inventory.find(x=>x.id===id&&x.owner===profile?.phone);
+ const out=document.getElementById("aiFoodResult");
+ if(!item){out.innerHTML=`<div class="notice">${esc(t("aiSelectPrompt"))} ${esc(t("aiNoItems"))}</div>`;return}
+ const days=daysUntil(item.expiry);
+ const advice=days<0?t("aiExpired"):(days<=3?t("aiUrgent"):t("aiPlan"));
+ out.innerHTML=`<div class="notice"><strong>${esc(t("aiFoodResultTitle"))}: ${esc(item.name)}</strong><p>${esc(advice)}</p><p class="muted">${esc(t("aiBasedOn"))} ${esc(t("aiSafety"))}</p></div>`;
+}
+function answerAIQuestion(question){
+ const q=question.toLowerCase();
+ if(/cook|prepared|cooked|leftover|వండిన|पका|पका हुआ/.test(q))return t("aiAnswerCooked");
+ if(/pack|packet|sealed|label|expiry|ప్యాక్|ప్యాకెట్|पैक|पैकेट|एक्सपायरी/.test(q))return t("aiAnswerPackaged");
+ if(/donat|share|ngo|దానం|విరాళ|दान|एनजीओ/.test(q))return t("aiAnswerDonate");
+ if(/waste|reduce|left|buy|store|వృథా|తగ్గ|బయట|बर्बादी|कम करें|स्टोर/.test(q))return t("aiAnswerWaste");
+ return t("aiAnswerDefault");
+}
+document.getElementById("aiQuestionForm").addEventListener("submit",e=>{
+ e.preventDefault();const question=document.getElementById("aiQuestion").value.trim();
+ if(!question){document.getElementById("aiAnswer").innerHTML=`<div class="notice">${esc(t("aiNeedQuestion"))}</div>`;return}
+ document.getElementById("aiAnswer").innerHTML=`<div class="notice"><strong>FreshStart:</strong><p>${esc(answerAIQuestion(question))}</p><p class="muted">${esc(t("aiDemoNote"))}</p></div>`;
+});
+function renderAIInsights(){
+ const out=document.getElementById("aiInsights");if(!out)return;
+ const mine=inventory.filter(x=>x.owner===profile?.phone);const expired=mine.filter(x=>daysUntil(x.expiry)<0).length;const soon=mine.filter(x=>daysUntil(x.expiry)>=0&&daysUntil(x.expiry)<=3).length;
+ const mineDonations=donations.filter(d=>d.donorKey===profile?.phone);const collected=mineDonations.filter(d=>d.status==="collected").length;
+ if(!mine.length&&!mineDonations.length){out.textContent=t("aiInsightEmpty");return}
+ const lines=[];
+ if(expired)lines.push(t("aiInsightExpired").replace("{n}",expired));
+ if(soon)lines.push(t("aiInsightSoon").replace("{n}",soon));
+ if(!expired&&!soon)lines.push(t("aiInsightGood"));
+ if(mineDonations.length)lines.push(t("aiInsightDonations").replace("{n}",mineDonations.length).replace("{c}",collected));
+ out.innerHTML=lines.map(x=>`<p>${esc(x)}</p>`).join("");
+}
+function refreshAI(){renderAISelector();renderAIInsights()}
+
+function mapsUrl(d){
+ if(d.coordinates&&/^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$/.test(d.coordinates))
+  return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(d.coordinates);
+ return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(d.fullAddress||"");
+}
+function statusLabel(s){
+ return t(({pending:"pendingStatus",approved:"approved",rejected:"rejectedStatus",collected:"collectedStatus"})[s]||"pendingStatus");
+}
+function donationCard(d,ngoMode=false){
+ return `<article class="card">
+ <div class="row"><div><h3>${esc(d.foodName)} — ${esc(d.quantity)} ${esc(t(d.unit))}</h3>
+ <p class="muted">${esc(t("id"))}: #${esc(d.id)} · ${esc(t("ngo"))}: ${esc(d.ngo)}</p></div>
+ <div><span class="badge ${esc(d.status)}">${esc(statusLabel(d.status))}</span></div></div>
+ <div class="grid"><div><h3>${esc(t("donorDetails"))}</h3>
+ <p>${esc(d.fullName)}<br>${esc(d.phone)}<br>${esc(d.email||"")}</p>
+ <p>${esc(t("pickupAddress"))}: ${esc(d.fullAddress)}</p>
+ <a href="${esc(mapsUrl(d))}" target="_blank" rel="noopener">${esc(t("map"))}</a></div>
+ <div><h3>${esc(t("foodDetails"))}</h3><p>${esc(t(d.foodType))}</p>
+ <p>${esc(t("preparedDate"))}: ${esc(d.preparedDate)}</p>
+ <p>${esc(t("expiryDate"))}: ${esc(d.expiryDate)}</p>
+ <p>${esc(t("pickup"))}: ${esc(d.pickupTime.replace("T"," "))}</p>
+ <p>${esc(t("notes"))}: ${esc(d.foodNotes||t("emptyNotes"))}</p></div></div>
+ ${ngoMode&&d.status==="pending"?`<div class="row"><button onclick="approveDonation('${esc(d.id)}')">${esc(t("approve"))}</button><button class="danger" onclick="rejectDonation('${esc(d.id)}')">${esc(t("reject"))}</button></div>`:""}
+ ${!ngoMode&&d.status==="pending"?`<div class="notice warning">${esc(t("pendingApproval"))}</div>`:""}
+ ${!ngoMode&&d.status==="approved"?`<div class="notice">${esc(t("approvedMessage"))}</div><button onclick="markCollected('${esc(d.id)}')">${esc(t("markCollected"))}</button>`:""}
+ </article>`;
+}
+function refresh(){
+ if(!profile)return;
+ document.getElementById("welcome").textContent=t("welcome")+", "+profile.fullName+"!";
+ document.getElementById("profileSummary").textContent=profile.phone+" · "+fullAddress();
+ const mine=donations.filter(d=>d.donorKey===profile.phone);
+ const ownInventory=inventory.filter(x=>x.owner===profile.phone);
+ document.getElementById("statInventory").textContent=ownInventory.length;
+ document.getElementById("statExpiring").textContent=ownInventory.filter(x=>daysUntil(x.expiry)<=3).length;
+ document.getElementById("statTotal").textContent=mine.length;
+ document.getElementById("statCollected").textContent=mine.filter(x=>x.status==="collected").length;
+ document.getElementById("impactTotal").textContent=mine.length;
+ document.getElementById("impactApproved").textContent=mine.filter(x=>["approved","collected"].includes(x.status)).length;
+ document.getElementById("impactCollected").textContent=mine.filter(x=>x.status==="collected").length;
+ document.getElementById("impactInventory").textContent=ownInventory.length;
+ renderInventory();
+ document.getElementById("trackingList").innerHTML=mine.length?mine.slice().reverse().map(d=>donationCard(d)).join(""):`<div class="card">${esc(t("noDonations"))}</div>`;
+ const pending=donations.filter(d=>d.status==="pending");
+ document.getElementById("ngoList").innerHTML=pending.length?pending.slice().reverse().map(d=>donationCard(d,true)).join(""):`<div class="card">${esc(t("noPending"))}</div>`;
+ document.getElementById("expiryAlerts").innerHTML=ownInventory.some(x=>daysUntil(x.expiry)<=3)?
+ `<div class="notice warning">🔔 ${esc(t("soonWarning"))} <button onclick="showTab('inventory')">${esc(t("inventory"))}</button></div>`:"";
+ refreshAI();
+ renderMessIntelligence();
+}
+function approveDonation(id){
+ const d=donations.find(x=>x.id===id);if(!d||d.status!=="pending")return;
+ d.status="approved";d.reviewedAt=new Date().toISOString();save();refresh();alert(t("approvedMessage"));
+}
+function rejectDonation(id){
+ const d=donations.find(x=>x.id===id);if(!d||d.status!=="pending")return;
+ if(!confirm(t("confirmReject")))return;
+ d.status="rejected";d.reviewedAt=new Date().toISOString();save();refresh();alert(t("rejectedMessage"));
+}
+function markCollected(id){
+ const d=donations.find(x=>x.id===id);if(!d||d.status!=="approved")return;
+ d.status="collected";d.collectedAt=new Date().toISOString();save();refresh();alert(t("collectedMessage"));
+}
+document.getElementById("donationForm").addEventListener("submit",e=>{
+ e.preventDefault();
+ if(!profile){showProfilePage();return}
+ const foodName=document.getElementById("foodName").value.trim();
+ const quantity=Number(document.getElementById("quantity").value);
+ const preparedDate=document.getElementById("preparedDate").value;
+ const expiryDate=document.getElementById("expiryDate").value;
+ const pickupTime=document.getElementById("pickupTime").value;
+ const now=new Date();
+ if(!foodName||!Number.isFinite(quantity)||quantity<=0||!preparedDate||!expiryDate||!pickupTime){alert(t("required"));return}
+ if(expiryDate<todayString()||expiryDate<preparedDate){alert(t("invalidDates"));return}
+ if(new Date(pickupTime)<now){alert(t("invalidPickup"));return}
+ if(!document.getElementById("safetyCheck").checked){alert(t("safety"));return}
+ const d={
+ id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),donorKey:profile.phone,
+ fullName:profile.fullName,phone:profile.phone,email:profile.email,fullAddress:fullAddress(),
+ coordinates:profile.coordinates,foodName,quantity,unit:document.getElementById("unit").value,
+ foodType:document.getElementById("foodType").value,preparedDate,expiryDate,pickupTime,
+ ngo:document.getElementById("ngoChoice").value,foodNotes:document.getElementById("foodNotes").value.trim(),
+ status:"pending",createdAt:new Date().toISOString()
+ };
+ donations.push(d);save();document.getElementById("donationForm").reset();
+ document.getElementById("donationMessage").innerHTML=`<div class="card">
+ <h2>${esc(t("donationThanks"))}</h2><p>${esc(t("donationThanksText"))}</p>
+ <div class="notice warning">${esc(t("pendingApproval"))}</div>
+ <p>${esc(t("id"))}: #${esc(d.id)}</p><p>${esc(t("ngo"))}: ${esc(d.ngo)}</p>
+ <p class="muted">${esc(t("demoOnly"))}</p><button onclick="showTab('tracking')">${esc(t("tracking"))}</button>
+ </div>`;
+ refresh();
+});
+function safeNumber(value){const n=Number(value);return Number.isFinite(n)?n:0}
+function messNumber(value){return safeNumber(value).toLocaleString(undefined,{maximumFractionDigits:2})}
+function messWasteRate(log){return log.prepared>0?(log.leftover/log.prepared)*100:0}
+function renderMessIntelligence(){
+ const totalPrepared=messLogs.reduce((sum,x)=>sum+x.prepared,0);
+ const totalLeftover=messLogs.reduce((sum,x)=>sum+x.leftover,0);
+ document.getElementById("messKpiMeals").textContent=messLogs.length;
+ document.getElementById("messKpiPrepared").textContent=messNumber(totalPrepared)+" kg";
+ document.getElementById("messKpiLeftover").textContent=messNumber(totalLeftover)+" kg";
+ document.getElementById("messKpiRate").textContent=(totalPrepared?((totalLeftover/totalPrepared)*100):0).toFixed(1)+"%";
+ const rows=document.getElementById("messRows");
+ rows.innerHTML=messLogs.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.createdAt||"").localeCompare(a.createdAt||"")).map(x=>`<tr><td>${esc(x.date)}</td><td>${esc(x.meal)}</td><td>${esc(x.menu)}</td><td>${esc(x.attendance)}</td><td>${messNumber(x.prepared)}</td><td>${messNumber(x.leftover)}</td><td>${messWasteRate(x).toFixed(1)}%</td><td>${esc(x.reason)}</td><td><button type="button" class="secondary" onclick="deleteMessRecord('${esc(x.id)}')">${esc(t("messDelete"))}</button></td></tr>`).join("");
+ document.getElementById("messEmpty").classList.toggle("hidden",messLogs.length>0);
+ const reasonTotals={};messLogs.forEach(x=>reasonTotals[x.reason]=(reasonTotals[x.reason]||0)+x.leftover);
+ const reasonEntries=Object.entries(reasonTotals).sort((a,b)=>b[1]-a[1]);
+ const reasonBox=document.getElementById("messReasonInsights");
+ reasonBox.innerHTML=reasonEntries.length?`<h3>${esc(t("messReasonBreakdown"))}</h3>`+reasonEntries.map(([reason,qty])=>{const pct=totalLeftover?qty/totalLeftover*100:0;return `<div style="margin:12px 0"><div class="row"><span>${esc(reason)}</span><b>${messNumber(qty)} kg · ${pct.toFixed(1)}%</b></div><div class="mess-bar"><span style="width:${Math.min(100,pct)}%"></span></div></div>`}).join(""):`<p class="muted">${esc(t("messNoReasonData"))}</p>`;
+ const recommendation=document.getElementById("messRecommendation");
+ if(!messLogs.length){recommendation.textContent=t("messNeedHistory");return}
+ const meal=document.getElementById("messMeal").value||"Lunch";
+ const menu=(document.getElementById("messMenu").value||"").trim().toLowerCase();
+ const attendance=Math.max(1,safeNumber(document.getElementById("messAttendance").value)||messLogs.filter(x=>x.meal===meal).slice(-1)[0]?.attendance||1);
+ let comparable=menu?messLogs.filter(x=>x.meal===meal&&x.menu.trim().toLowerCase()===menu):[];
+ let basis=menu&&comparable.length?`same menu (${menu})`:"same meal period";
+ if(!comparable.length)comparable=messLogs.filter(x=>x.meal===meal);
+ if(comparable.length){
+  const totalServed=comparable.reduce((sum,x)=>sum+(x.prepared-x.leftover),0);
+  const totalPeople=comparable.reduce((sum,x)=>sum+x.attendance,0);
+  const perPerson=totalPeople?totalServed/totalPeople:0;
+  const estimate=Math.max(0,perPerson*attendance*1.05);
+  recommendation.innerHTML=`<b>${esc(t("messEstimate"))}: ${messNumber(estimate)} kg</b><p>${esc(t("messEstimateText"))}</p><p class="muted">Based on ${comparable.length} record(s), ${esc(basis)}, and ${attendance} students. Includes a 5% planning buffer. Compare against actual demand and adjust; this is not a guarantee.</p>`;
+ }else recommendation.textContent=t("messNeedHistory");
+}
+document.getElementById("messDate").value=todayString();
+document.getElementById("messForm").addEventListener("submit",e=>{
+ e.preventDefault();
+ const date=document.getElementById("messDate").value;
+ const meal=document.getElementById("messMeal").value;
+ const menu=document.getElementById("messMenu").value.trim();
+ const attendance=safeNumber(document.getElementById("messAttendance").value);
+ const prepared=safeNumber(document.getElementById("messPrepared").value);
+ const leftover=safeNumber(document.getElementById("messLeftover").value);
+ if(!date||!menu||attendance<1||prepared<=0||leftover<0){alert(t("required"));return}
+ if(leftover>prepared){alert(t("messValidation"));return}
+ messLogs.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),date,meal,menu,attendance,prepared,leftover,reason:document.getElementById("messReason").value,notes:document.getElementById("messNotes").value.trim(),createdAt:new Date().toISOString()});
+ save();document.getElementById("messForm").reset();document.getElementById("messDate").value=todayString();renderMessIntelligence();
+});
+function deleteMessRecord(id){if(!confirm(t("messConfirmDelete")))return;messLogs=messLogs.filter(x=>x.id!==id);save();renderMessIntelligence()}
+function exportMessCSV(){
+ const headers=["Date","Meal","Menu","Students","Prepared kg","Leftover kg","Leftover rate %","Reason","Notes"];
+ const lines=[headers,...messLogs.map(x=>[x.date,x.meal,x.menu,x.attendance,x.prepared,x.leftover,messWasteRate(x).toFixed(1),x.reason,x.notes||""])].map(row=>row.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(","));
+ const blob=new Blob(["\uFEFF"+lines.join("\r\n")],{type:"text/csv;charset=utf-8;"});
+ const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="freshstart-mess-records.csv";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
+
+function init(){
+ document.getElementById("language").value=lang;
+ applyTranslations();
+ if(profile){showAppPage();showTab("dashboard")}else showProfilePage();
+}
+init();
+</script>
+</body>
+</html>
